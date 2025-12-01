@@ -1,15 +1,13 @@
 package main
 
-import (
-	"github.com/deosjr/adventofcode2024/lib" // todo: 2025
-)
+import "github.com/deosjr/adventofcode2025/lib"
 
+// negative modulo always trips me up in Go
 func posmod(n, m int64) int64 {
 	return (n + m) % m
 }
 
 func main() {
-	//lib.Test()
 	var dial int64 = 50
 	var p1, p2 int64 = 0, 0
 	lib.ReadFileByLine(1, func(line string) {
