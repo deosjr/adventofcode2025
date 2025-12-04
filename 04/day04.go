@@ -6,18 +6,14 @@ type coord struct {
 	x, y int
 }
 
+var mooreNeighbours = []coord{ {-1,0}, {1,0}, {0,-1}, {0,1}, {-1,-1}, {-1,1}, {1,-1}, {1,1} }
+
 func getNeighbours(grid map[coord]bool) map[coord]int {
 	neighbours := map[coord]int{}
 	for c := range grid {
-		x, y := c.x, c.y
-		neighbours[coord{x-1, y}] += 1
-		neighbours[coord{x+1, y}] += 1
-		neighbours[coord{x, y-1}] += 1
-		neighbours[coord{x, y+1}] += 1
-		neighbours[coord{x-1, y-1}] += 1
-		neighbours[coord{x-1, y+1}] += 1
-		neighbours[coord{x+1, y-1}] += 1
-		neighbours[coord{x+1, y+1}] += 1
+		for _, n := range mooreNeighbours {
+			neighbours[coord{c.x+n.x, c.y+n.y}] += 1
+		}
 	}
 	return neighbours
 }
@@ -46,14 +42,9 @@ func main() {
 		}
 		y++
 	})
-	p1 := 0
-	neighbours := getNeighbours(grid)
-	for c := range grid {
-		if neighbours[c] < 4 {
-			p1++
-		}
-	}
+	p1 := len(grid) - len(reduceGrid(grid))
 	lib.WritePart1("%d", p1)
+
 	p2 := 0
 	for {
 		g := reduceGrid(grid)
