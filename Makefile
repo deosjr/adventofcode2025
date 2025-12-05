@@ -6,3 +6,5 @@ go3:
 	@go run 03/day03.go
 go4:
 	@go run 04/day04.go
+go5:
+	@go run 05/day05.go
