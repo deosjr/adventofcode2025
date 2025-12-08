@@ -26,8 +26,43 @@ type connection struct {
 	length float64
 }
 
+func (c connection) connect(circuits map[jbox]int) {
+	idFrom, okFrom := circuits[c.from]
+	idTo, okTo := circuits[c.to]
+	if okFrom && okTo {
+		// connect the two circuits
+		for k, v := range circuits {
+			if v == idTo {
+				circuits[k] = idFrom
+			}
+		}
+		return
+	}
+	if okFrom {
+		circuits[c.to] = idFrom
+		return
+	}
+	if okTo {
+		circuits[c.from] = idTo
+		return
+	}
+	newid := len(circuits)
+	circuits[c.from] = newid
+	circuits[c.to] = newid
+}
+
+func sizes(circuits map[jbox]int) []int {
+	sizes := map[int]int{}
+	for _, v := range circuits {
+		sizes[v] += 1
+	}
+	sortFunc := func(a, b int) int {
+		return cmp.Compare(b, a)
+	}
+	return slices.SortedFunc(maps.Values(sizes), sortFunc)
+}
+
 func main() {
-	//lib.Test()
 	var boxes []jbox
 	lib.ReadFileByLine(8, func(line string) {
 		split := strings.Split(line, ",")
@@ -46,41 +81,24 @@ func main() {
 	}
 	sort.Slice(connections, func(i, j int) bool { return connections[i].length < connections[j].length })
 
+	p1split := 1000
 	circuits := map[jbox]int{}
-	for _, c := range connections[:1000] {
-		idFrom, okFrom := circuits[c.from]
-		idTo, okTo := circuits[c.to]
-		if okFrom && okTo {
-			// connect the two circuits
-			for k, v := range circuits {
-				if v == idTo {
-					circuits[k] = idFrom
-				}
-			}
-			continue
-		}
-		if okFrom {
-			circuits[c.to] = idFrom
-			continue
-		}
-		if okTo {
-			circuits[c.from] = idTo
-			continue
-		}
-		newid := len(circuits)
-		circuits[c.from] = newid
-		circuits[c.to] = newid
+	for _, c := range connections[:p1split] {
+		c.connect(circuits)
 	}
-
-	// this could be done in the loop above, I suppose
-	sizes := map[int]int{}
-	for _, v := range circuits {
-		sizes[v] += 1
-	}
-	sortFunc := func(a, b int) int {
-		return cmp.Compare(b, a)
-	}
-	values := slices.SortedFunc(maps.Values(sizes), sortFunc)[:3]
-
+	values := sizes(circuits)
 	lib.WritePart1("%v", values[0] * values[1] * values[2])
+
+	for _, box := range boxes {
+		if _, ok := circuits[box]; !ok {
+			circuits[box] = len(circuits)
+		}
+	}
+	for _, c := range connections[p1split:] {
+		c.connect(circuits)
+		if len(sizes(circuits)) == 1 {
+			lib.WritePart2("%d", c.from.x * c.to.x)
+			break
+		}
+	}
 }
