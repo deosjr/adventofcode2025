@@ -12,3 +12,5 @@ go6:
 	@go run 06/day06.go
 go7:
 	@go run 07/day07.go
+go8:
+	@go run 08/day08.go
