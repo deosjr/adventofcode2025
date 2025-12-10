@@ -2,6 +2,7 @@ package main
 
 import (
 	"math"
+	"sort"
 	"strings"
 	"github.com/deosjr/adventofcode2025/lib"
 )
@@ -46,6 +47,8 @@ func (m machine) solveP1BFS(depth int64, set map[int64]struct{}) int64 {
 }
 
 // NOTE: order does _not_ matter for part 2
+// TODO: if a button is the only one left for a joltage index, set, dont loop!
+// this probably requires keeping the occurence map in the search (see parseButton)
 func (m machine) solveP2() int64 {
 	init := make([]int64, len(m.joltage))
 	// try buttons in order, pressing them 0-300 times each
@@ -125,6 +128,7 @@ func parseLights(s string) int64 {
 
 func parseButtons(s string, length int) []button {
 	var buttons []button
+	occ := map[int]int{}
 	for _, sb := range strings.Split(s, " ") {
 		var bits int64
 		var nums []int
@@ -132,9 +136,27 @@ func parseButtons(s string, length int) []button {
 			n := int(lib.MustParseInt(sn))
 			nums = append(nums, n)
 			bits = setBit(bits, length - n - 1)
+			occ[n] += 1
 		}
 		buttons = append(buttons, button{bits, nums})
 	}
+	sort.Slice(buttons, func(i, j int) bool {
+		bi := buttons[i].nums
+		mini := len(buttons)
+		for _, n := range bi {
+			if occ[n] < mini {
+				mini = occ[n]
+			}
+		}
+		bj := buttons[j].nums
+		minj := len(buttons)
+		for _, n := range bj {
+			if occ[n] < minj {
+				minj = occ[n]
+			}
+		}
+		return mini < minj
+	 })
 	return buttons
 }
 
@@ -155,6 +177,7 @@ func main() {
 	})
 	var p1, p2 int64
 	for _, m := range machines {
+		lib.WritePart1("%v", m)
 		p1 += m.solveP1()
 		p2 += m.solveP2()
 	}
