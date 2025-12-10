@@ -8,24 +8,31 @@ import (
 
 type machine struct {
 	lights  int64
-	buttons []int64
+	buttons []button
 	joltage []int64
 }
 
+type button struct {
+	bits int64
+	nums []int
+}
+
 // TODO: no button should be pressed twice in a row
-func (m machine) solve() int64 {
+// TODO: same config at a later depth can be ignored
+func (m machine) solveP1() int64 {
 	if m.lights == 0 {
 		return 0
 	}
 	set := map[int64]struct{}{0: struct{}{}}
-	return m.solveBFS(1, set)
+	return m.solveP1BFS(1, set)
 }
 
-func (m machine) solveBFS(depth int64, set map[int64]struct{}) int64 {
+func (m machine) solveP1BFS(depth int64, set map[int64]struct{}) int64 {
 	newset := map[int64]struct{}{}
 	for k := range set {
-		for _, b := range m.buttons {
+		for _, button := range m.buttons {
 			// flip bits in k according to mask b
+			b := button.bits
 			f := ^k & b
 			v := k & ^b
 			flipped := f | v
@@ -35,7 +42,50 @@ func (m machine) solveBFS(depth int64, set map[int64]struct{}) int64 {
 			newset[flipped] = struct{}{}
 		}
 	}
-	return m.solveBFS(depth+1, newset)
+	return m.solveP1BFS(depth+1, newset)
+}
+
+func (m machine) solveP2() int64 {
+	init := make([]int64, len(m.joltage))
+	if m.checkJoltage(init) {
+		return 0
+	}
+	return m.solveP2BFS(1, [][]int64{init})
+}
+
+func (m machine) solveP2BFS(depth int64, fringe [][]int64) int64 {
+	var newfringe [][]int64
+	for _, list := range fringe {
+	Loop:
+		for _, button := range m.buttons {
+			l := make([]int64, len(list))
+			copy(l, list)
+			for _, i := range button.nums {
+				l[i] += 1
+				if l[i] > m.joltage[i] {
+					continue Loop
+				}
+			}
+			if m.checkJoltage(l) {
+				return depth
+			}
+			// TODO: check duplicates?
+			newfringe = append(newfringe, l)
+		}
+	}
+	return m.solveP2BFS(depth+1, newfringe)
+}
+
+func (m machine) checkJoltage(list []int64) bool {
+	if len(m.joltage) != len(list) {
+		return false
+	}
+	for i, j := range m.joltage {
+		if list[i] != j {
+			return false
+		}
+	}
+	return true
 }
 
 func parseMachine(s string) machine {
@@ -64,21 +114,28 @@ func parseLights(s string) int64 {
 	return lights
 }
 
-func parseButtons(s string, length int) []int64 {
-	var buttons []int64
+func parseButtons(s string, length int) []button {
+	var buttons []button
 	for _, sb := range strings.Split(s, " ") {
-		var button int64
+		var bits int64
+		var nums []int
 		for _, sn := range strings.Split(sb[1:len(sb)-1], ",") {
 			n := int(lib.MustParseInt(sn))
-			button = setBit(button, length - n - 1)
+			nums = append(nums, n)
+			bits = setBit(bits, length - n - 1)
 		}
-		buttons = append(buttons, button)
+		buttons = append(buttons, button{bits, nums})
 	}
 	return buttons
 }
 
 func parseJoltage(s string) []int64 {
-	return nil
+	var joltage []int64
+	for _, sn := range strings.Split(strings.Trim(s, "}"), ",") {
+		n := lib.MustParseInt(sn)
+		joltage = append(joltage, n)
+	}
+	return joltage
 }
 
 func main() {
@@ -87,9 +144,11 @@ func main() {
 	lib.ReadFileByLine(10, func(line string) {
 		machines = append(machines, parseMachine(line))
 	})
-	var p1 int64
+	var p1, p2 int64
 	for _, m := range machines {
-		p1 += m.solve()
+		p1 += m.solveP1()
+		p2 += m.solveP2()
 	}
 	lib.WritePart1("%d", p1)
+	lib.WritePart2("%d", p2)
 }
