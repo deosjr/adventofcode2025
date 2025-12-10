@@ -45,35 +45,44 @@ func (m machine) solveP1BFS(depth int64, set map[int64]struct{}) int64 {
 	return m.solveP1BFS(depth+1, newset)
 }
 
+// NOTE: order does _not_ matter for part 2
 func (m machine) solveP2() int64 {
 	init := make([]int64, len(m.joltage))
-	if m.checkJoltage(init) {
-		return 0
+	// try buttons in order, pressing them 0-300 times each
+	res := m.solveP2rec(init, 0, 0, math.MaxInt64)
+	if res == math.MaxInt64 {
+		panic("failed to find")
 	}
-	return m.solveP2BFS(1, [][]int64{init})
+	return res
 }
 
-func (m machine) solveP2BFS(depth int64, fringe [][]int64) int64 {
-	var newfringe [][]int64
-	for _, list := range fringe {
-	Loop:
-		for _, button := range m.buttons {
-			l := make([]int64, len(list))
-			copy(l, list)
-			for _, i := range button.nums {
-				l[i] += 1
-				if l[i] > m.joltage[i] {
-					continue Loop
-				}
+func (m machine) solveP2rec(list []int64, buttonIdx int, total, best int64) int64 {
+	if total > best {
+		return best
+	}
+	if m.checkJoltage(list) {
+		return total
+	}
+	if buttonIdx == len(m.buttons) {
+		return best
+	}
+	limit := 300
+	l := make([]int64, len(list))
+	for i:=0; i<limit; i++ {
+		copy(l, list)
+		for _, n := range m.buttons[buttonIdx].nums {
+			v := list[n] + int64(i)
+			if v > m.joltage[n] {
+				return best
 			}
-			if m.checkJoltage(l) {
-				return depth
-			}
-			// TODO: check duplicates?
-			newfringe = append(newfringe, l)
+			l[n] = v
+		}
+		res := m.solveP2rec(l, buttonIdx+1, total+int64(i), best)
+		if res < best {
+			best = res
 		}
 	}
-	return m.solveP2BFS(depth+1, newfringe)
+	return best
 }
 
 func (m machine) checkJoltage(list []int64) bool {
