@@ -47,19 +47,18 @@ func (m machine) solveP1BFS(depth int64, set map[int64]struct{}) int64 {
 }
 
 // NOTE: order does _not_ matter for part 2
-// TODO: if a button is the only one left for a joltage index, set, dont loop!
-// this probably requires keeping the occurence map in the search (see parseButton)
 func (m machine) solveP2() int64 {
 	init := make([]int64, len(m.joltage))
+	occ := occurances(m.buttons)
 	// try buttons in order, pressing them 0-300 times each
-	res := m.solveP2rec(init, 0, 0, math.MaxInt64)
+	res := m.solveP2rec(init, 0, 0, math.MaxInt64, occ)
 	if res == math.MaxInt64 {
 		panic("failed to find")
 	}
 	return res
 }
 
-func (m machine) solveP2rec(list []int64, buttonIdx int, total, best int64) int64 {
+func (m machine) solveP2rec(list []int64, buttonIdx int, total, best int64, occ map[int]int) int64 {
 	if total > best {
 		return best
 	}
@@ -69,23 +68,73 @@ func (m machine) solveP2rec(list []int64, buttonIdx int, total, best int64) int6
 	if buttonIdx == len(m.buttons) {
 		return best
 	}
+
+	button := m.buttons[buttonIdx]
+
+	// if a button is the only one left for a joltage index, set, dont loop!
+	// if multiple nums are the only one left, we only have to try one of them
+	for _, n := range button.nums {
+		if occ[n] > 1 {
+			continue
+		}
+		if occ[n] < 1 {
+			panic("smth has gone wrong")
+		}
+		// this button is the last one to toggle joltage number n
+		presses := m.joltage[n] - list[n]
+		l := make([]int64, len(list))
+		if ok := m.updateList(l, list, button, int64(presses)); !ok {
+			return best
+		}
+		useButton(occ, button)
+		res := m.solveP2rec(l, buttonIdx+1, total+int64(presses), best, occ)
+		undoButton(occ, button)
+		if res < best {
+			return res
+		}
+		return best
+	}
+	
+
+	// otherwise, try in a loop up until max joltage (~300)
 	limit := 300
 	l := make([]int64, len(list))
 	for i:=0; i<limit; i++ {
-		copy(l, list)
-		for _, n := range m.buttons[buttonIdx].nums {
-			v := list[n] + int64(i)
-			if v > m.joltage[n] {
-				return best
-			}
-			l[n] = v
+		if ok := m.updateList(l, list, button, int64(i)); !ok {
+			return best
 		}
-		res := m.solveP2rec(l, buttonIdx+1, total+int64(i), best)
+		useButton(occ, button)
+		res := m.solveP2rec(l, buttonIdx+1, total+int64(i), best, occ)
+		undoButton(occ, button)
 		if res < best {
 			best = res
 		}
 	}
 	return best
+}
+
+func (m machine) updateList(dst, src []int64, button button, numPresses int64) bool {
+	copy(dst, src)
+	for _, n := range button.nums {
+		v := src[n] + numPresses
+		if v > m.joltage[n] {
+			return false
+		}
+		dst[n] = v
+	}
+	return true
+}
+
+func useButton(occ map[int]int, button button) {
+	for _, n := range button.nums {
+		occ[n] -= 1
+	}
+}
+
+func undoButton(occ map[int]int, button button) {
+	for _, n := range button.nums {
+		occ[n] += 1
+	}
 }
 
 func (m machine) checkJoltage(list []int64) bool {
@@ -126,9 +175,18 @@ func parseLights(s string) int64 {
 	return lights
 }
 
+func occurances(buttons []button) map[int]int {
+	occ := map[int]int{}
+	for _, b := range buttons {
+		for _, n := range b.nums {
+			occ[n] += 1
+		}
+	}
+	return occ
+}
+
 func parseButtons(s string, length int) []button {
 	var buttons []button
-	occ := map[int]int{}
 	for _, sb := range strings.Split(s, " ") {
 		var bits int64
 		var nums []int
@@ -136,10 +194,10 @@ func parseButtons(s string, length int) []button {
 			n := int(lib.MustParseInt(sn))
 			nums = append(nums, n)
 			bits = setBit(bits, length - n - 1)
-			occ[n] += 1
 		}
 		buttons = append(buttons, button{bits, nums})
 	}
+	occ := occurances(buttons)
 	sort.Slice(buttons, func(i, j int) bool {
 		bi := buttons[i].nums
 		mini := len(buttons)
