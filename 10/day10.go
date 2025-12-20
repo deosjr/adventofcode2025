@@ -82,12 +82,11 @@ func (m machine) solveP2rec(list []int64, buttonIdx int, total, best int64, occ 
 		}
 		// this button is the last one to toggle joltage number n
 		presses := m.joltage[n] - list[n]
-		l := make([]int64, len(list))
-		if ok := m.updateList(l, list, button, int64(presses)); !ok {
+		if ok := m.updateList(list, list, button, int64(presses)); !ok {
 			return best
 		}
 		useButton(occ, button)
-		res := m.solveP2rec(l, buttonIdx+1, total+int64(presses), best, occ)
+		res := m.solveP2rec(list, buttonIdx+1, total+int64(presses), best, occ)
 		undoButton(occ, button)
 		if res < best {
 			return res
@@ -99,17 +98,18 @@ func (m machine) solveP2rec(list []int64, buttonIdx int, total, best int64, occ 
 	// otherwise, try in a loop up until max joltage (~300)
 	limit := 300
 	l := make([]int64, len(list))
+	useButton(occ, button)
 	for i:=0; i<limit; i++ {
 		if ok := m.updateList(l, list, button, int64(i)); !ok {
+			undoButton(occ, button)
 			return best
 		}
-		useButton(occ, button)
 		res := m.solveP2rec(l, buttonIdx+1, total+int64(i), best, occ)
-		undoButton(occ, button)
 		if res < best {
 			best = res
 		}
 	}
+	undoButton(occ, button)
 	return best
 }
 
@@ -214,7 +214,7 @@ func parseButtons(s string, length int) []button {
 			}
 		}
 		return mini < minj
-	 })
+	})
 	return buttons
 }
 
