@@ -228,14 +228,12 @@ func parseJoltage(s string) []int64 {
 }
 
 func main() {
-	//lib.Test()
 	var machines []machine
 	lib.ReadFileByLine(10, func(line string) {
 		machines = append(machines, parseMachine(line))
 	})
 	var p1, p2 int64
 	for _, m := range machines {
-		lib.WritePart1("%v", m)
 		p1 += m.solveP1()
 		p2 += m.solveP2()
 	}
