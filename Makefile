@@ -20,3 +20,5 @@ go10:
 	@go run 10/day10.go
 go11:
 	@go run 11/day11.go
+go12:
+	@go run 12/day12.go
